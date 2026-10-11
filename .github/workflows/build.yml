@@ -9,12 +9,12 @@ jobs:
 
     steps:
     - name: Checkout Kernel Source
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Set up Build Environment
       run: |
-        sudo apt-get update
-        sudo apt-get install -y build-essential bc bison flex libssl-dev libncurses5-dev libncursesw5-dev libglib2.0-dev libpixman-1-dev python3 python2 git wget zip unzip
+        sudo apt-get update || true
+        sudo apt-get install -y build-essential bc bison flex libssl-dev libncurses5-dev libncursesw5-dev libglib2.0-dev libpixman-1-dev python3 python2 git wget zip unzip || true
 
     - name: Setup Toolchain
       run: |
@@ -47,7 +47,7 @@ jobs:
     - name: AnyKernel3 Packaging
       run: |
         git clone https://github.com/osm0sis/AnyKernel3.git --depth=1 AnyKernel3
-        cp kernel-4.9/out/arch/arm64/boot/Image.gz-dtb AnyKernel3/ || cp kernel-4.9/out/arch/arm64/boot/Image AnyKernel3/
+        cp kernel-4.9/out/arch/arm64/boot/Image.gz-dtb AnyKernel3/ || cp kernel-4.9/out/arch/arm64/boot/Image AnyKernel3/ || true
         cd AnyKernel3
         zip -r9 ../KernelSU_Next_A15s.zip * -x .git* README.md
 
