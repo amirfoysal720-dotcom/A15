@@ -5,7 +5,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
 
     steps:
     - name: Checkout Kernel Source
@@ -13,17 +13,16 @@ jobs:
 
     - name: Set up Build Environment
       run: |
-        sudo apt-get update || true
-        sudo apt-get install -y build-essential bc bison flex libssl-dev libncurses5-dev libncursesw5-dev libglib2.0-dev libpixman-1-dev python3 python2 git wget zip unzip gcc-aarch64-linux-gnu || true
+        sudo apt-get update
+        sudo apt-get install -y build-essential bc bison flex libssl-dev libncurses5-dev libncursesw5-dev libglib2.0-dev libpixman-1-dev python3 python2 git wget zip unzip gcc-aarch64-linux-gnu g++-aarch64-linux-gnu ccache
 
-    - name: Inject KernelSU Next & Enable Configs
+    - name: Inject KernelSU Next
       run: |
-        # Clone KernelSU Next into drivers
         curl -LSs "https://raw.githubusercontent.com/rifs28/KernelSU-Next/next/kernel/setup.sh" | bash -s next
-        
-        # Enable Required Configs in defconfig
+
+    - name: Enable Required Configs
+      run: |
         DEFCONFIG_FILE="kernel-4.9/arch/arm64/configs/oppo6765_defconfig"
-        
         echo "CONFIG_KPROBES=y" >> $DEFCONFIG_FILE
         echo "CONFIG_HAVE_KPROBES=y" >> $DEFCONFIG_FILE
         echo "CONFIG_KPROBE_EVENTS=y" >> $DEFCONFIG_FILE
@@ -32,17 +31,20 @@ jobs:
 
     - name: Build Kernel
       run: |
-        export ARCH=arm64
-        export CROSS_COMPILE=aarch64-linux-gnu-
-        
         cd kernel-4.9
-        make O=out oppo6765_defconfig
-        make -j$(nproc --all) O=out
+        make O=out ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- oppo6765_defconfig
+        make -j$(nproc --all) O=out ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu-
 
     - name: AnyKernel3 Packaging
       run: |
         git clone https://github.com/osm0sis/AnyKernel3.git --depth=1 AnyKernel3
-        cp kernel-4.9/out/arch/arm64/boot/Image.gz-dtb AnyKernel3/ || cp kernel-4.9/out/arch/arm64/boot/Image AnyKernel3/ || true
+        if [ -f kernel-4.9/out/arch/arm64/boot/Image.gz-dtb ]; then
+          cp kernel-4.9/out/arch/arm64/boot/Image.gz-dtb AnyKernel3/
+        elif [ -f kernel-4.9/out/arch/arm64/boot/Image.gz ]; then
+          cp kernel-4.9/out/arch/arm64/boot/Image.gz AnyKernel3/
+        elif [ -f kernel-4.9/out/arch/arm64/boot/Image ]; then
+          cp kernel-4.9/out/arch/arm64/boot/Image AnyKernel3/
+        fi
         cd AnyKernel3
         zip -r9 ../KernelSU_Next_A15s.zip * -x .git* README.md
 
