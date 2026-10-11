@@ -1,0 +1,58 @@
+name: Build Oppo A15/A15s Kernel with KernelSU Next
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Kernel Source
+      uses: actions/checkout@v3
+
+    - name: Set up Build Environment
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential bc bison flex libssl-dev libncurses5-dev libncursesw5-dev libglib2.0-dev libpixman-1-dev python3 python2 git wget zip unzip
+
+    - name: Setup Toolchain
+      run: |
+        git clone https://gitlab.com/c333/aarch64-linux-android-4.9.git --depth=1 toolchain
+
+    - name: Inject KernelSU Next & Enable Configs
+      run: |
+        # Clone KernelSU Next into drivers
+        curl -LSs "https://raw.githubusercontent.com/rifs28/KernelSU-Next/next/kernel/setup.sh" | bash -s next
+        
+        # Enable Required Configs in defconfig
+        DEFCONFIG_FILE="kernel-4.9/arch/arm64/configs/oppo6765_defconfig"
+        
+        echo "CONFIG_KPROBES=y" >> $DEFCONFIG_FILE
+        echo "CONFIG_HAVE_KPROBES=y" >> $DEFCONFIG_FILE
+        echo "CONFIG_KPROBE_EVENTS=y" >> $DEFCONFIG_FILE
+        echo "CONFIG_OVERLAY_FS=y" >> $DEFCONFIG_FILE
+        echo "CONFIG_NETFILTER=y" >> $DEFCONFIG_FILE
+
+    - name: Build Kernel
+      run: |
+        export PATH=$(pwd)/toolchain/bin:$PATH
+        export ARCH=arm64
+        export CROSS_COMPILE=aarch64-linux-android-
+        
+        cd kernel-4.9
+        make O=out oppo6765_defconfig
+        make -j$(nproc --all) O=out
+
+    - name: AnyKernel3 Packaging
+      run: |
+        git clone https://github.com/osm0sis/AnyKernel3.git --depth=1 AnyKernel3
+        cp kernel-4.9/out/arch/arm64/boot/Image.gz-dtb AnyKernel3/ || cp kernel-4.9/out/arch/arm64/boot/Image AnyKernel3/
+        cd AnyKernel3
+        zip -r9 ../KernelSU_Next_A15s.zip * -x .git* README.md
+
+    - name: Upload Kernel Artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: KernelSU-Next-Kernel-A15s
+        path: KernelSU_Next_A15s.zip
