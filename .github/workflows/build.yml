@@ -14,11 +14,7 @@ jobs:
     - name: Set up Build Environment
       run: |
         sudo apt-get update || true
-        sudo apt-get install -y build-essential bc bison flex libssl-dev libncurses5-dev libncursesw5-dev libglib2.0-dev libpixman-1-dev python3 python2 git wget zip unzip || true
-
-    - name: Setup Toolchain
-      run: |
-        git clone https://gitlab.com/c333/aarch64-linux-android-4.9.git --depth=1 toolchain
+        sudo apt-get install -y build-essential bc bison flex libssl-dev libncurses5-dev libncursesw5-dev libglib2.0-dev libpixman-1-dev python3 python2 git wget zip unzip gcc-aarch64-linux-gnu || true
 
     - name: Inject KernelSU Next & Enable Configs
       run: |
@@ -36,9 +32,8 @@ jobs:
 
     - name: Build Kernel
       run: |
-        export PATH=$(pwd)/toolchain/bin:$PATH
         export ARCH=arm64
-        export CROSS_COMPILE=aarch64-linux-android-
+        export CROSS_COMPILE=aarch64-linux-gnu-
         
         cd kernel-4.9
         make O=out oppo6765_defconfig
